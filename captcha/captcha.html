@@ -1,52 +1,313 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Joel</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <head>
+    <meta charset="utf-8" />
+    <title>Joel</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <style type="text/css">
-    html,
-    body {
-      background: pink;
-      margin: 0;
-      padding: 0;
-      font-family: sans-serif;
-    }
-
-    #captcha-container {
-      background: white;
-      width: 390px;
-      height: 300px;
-    }
-
-    /* Your style here... */
-  </style>
-</head>
-
-<body>
-  <div id="captcha-container">
-    <!-- Add your CAPTCHA here: -->
-    Hello world!
-
-    <!-- We've added a sample button. Feel free to remove it: -->
-    <button id="solve">
-      Solve!
-    </button>
-  </div>
-
-  <script type="text/javascript">
-    (function(window, document){
-      // This is how you tell the parent window that the CAPTCHA was successful.
-      function captchaSuccess() {
-        window.top.postMessage("success", '*');
+    <style type="text/css">
+      html,
+      body {
+        background: pink;
+        margin: 0;
+        padding: 0;
+        font-family: sans-serif;
       }
 
-      // Your CAPTCHA code goes here, we've added a simple example below:
-      document.getElementById('solve')
-           .addEventListener('click', () => captchaSuccess());
+      #captcha-container {
+        background: white;
+        width: 390px;
+        height: 300px;
+      }
 
-    })(window, document);
-  </script>
-</body>
+      /* Your style here... */
+    </style>
+  </head>
+
+  <body>
+    <div id="captcha-container">
+      <!-- Add your CAPTCHA here: -->
+      <canvas id="captcha-canvas" width="390" height="300">
+        <!-- Minigolf: user has to complete multiple minigolf courses to get approved -->
+      </canvas>
+    </div>
+
+    <script type="text/javascript">
+      (function (window, document) {
+        // This is how you tell the parent window that the CAPTCHA was successful.
+        function captchaSuccess() {
+          console.log("CAPTCHA completed successfully!"); // Log for debugging
+          window.top.postMessage("success", "*");
+        }
+
+        // Your CAPTCHA code goes here, we've added a simple example below:
+        const canvas = document.getElementById("captcha-canvas");
+        const ctx = canvas.getContext("2d");
+
+        // Game state
+        let courseIndex = 0;
+        let success = false;
+        let aim = null;
+
+        const courses = [
+          {
+            // ###
+            start: { x: 75, y: 75 },
+            end: { x: 310, y: 75 },
+            boundaries: [
+              { x: 10, y: 10 },
+              { x: 380, y: 10 },
+              { x: 380, y: 140 },
+              { x: 10, y: 140 },
+              { x: 10, y: 10 },
+            ],
+          },
+          {
+            // ###
+            //   #
+            start: { x: 75, y: 75 },
+            end: { x: 310, y: 240 },
+            boundaries: [
+              { x: 10, y: 10 },
+              { x: 380, y: 10 },
+              { x: 380, y: 290 },
+              { x: 240, y: 290 },
+              { x: 240, y: 140 },
+              { x: 10, y: 140 },
+              { x: 10, y: 10 },
+            ],
+          },
+          {
+            // # #
+            // ###
+            start: { x: 75, y: 75 },
+            end: { x: 310, y: 75 },
+            boundaries: [
+              { x: 10, y: 10 },
+              { x: 150, y: 10 },
+              { x: 150, y: 160 },
+              { x: 240, y: 160 },
+              { x: 240, y: 10 },
+              { x: 380, y: 10 },
+              { x: 380, y: 290 },
+              { x: 10, y: 290 },
+              { x: 10, y: 10 },
+            ],
+          },
+        ];
+
+        const ball = {
+          x: courses[0].start.x,
+          y: courses[0].start.y,
+          vx: 0,
+          vy: 0,
+          moving: false,
+          prev: { x: courses[0].start.x, y: courses[0].start.y },
+          reset(start) {
+            this.x = start.x;
+            this.y = start.y;
+            this.vx = 0;
+            this.vy = 0;
+            this.moving = false;
+          },
+          updatePrev() {
+            this.prev.x = this.x;
+            this.prev.y = this.y;
+          },
+          restorePrev() {
+            this.x = this.prev.x;
+            this.y = this.prev.y;
+            this.vx = 0;
+            this.vy = 0;
+            this.moving = false;
+          },
+        };
+
+        // Drawing functions
+        function drawHole(x, y) {
+          ctx.beginPath();
+          ctx.arc(x, y, 15, 0, Math.PI * 2);
+          ctx.fillStyle = "black";
+          ctx.fill();
+          ctx.closePath();
+        }
+
+        function drawCourse(course) {
+          ctx.beginPath();
+          ctx.moveTo(course.boundaries[0].x, course.boundaries[0].y);
+          for (let i = 1; i < course.boundaries.length; i++) {
+            ctx.lineTo(course.boundaries[i].x, course.boundaries[i].y);
+          }
+          ctx.closePath();
+          ctx.fillStyle = "green";
+          ctx.fill();
+          drawHole(course.end.x, course.end.y);
+        }
+
+        function drawBall(x, y) {
+          ctx.beginPath();
+          ctx.arc(x, y, 10, 0, Math.PI * 2);
+          ctx.fillStyle = "white";
+          ctx.fill();
+          ctx.closePath();
+        }
+
+        function drawAimLine() {
+          if (aim) {
+            ctx.beginPath();
+            ctx.moveTo(ball.x, ball.y);
+            ctx.lineTo(aim.x, aim.y);
+            ctx.strokeStyle = "red";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.closePath();
+          }
+        }
+
+        function draw() {
+          // Clear canvas
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = "lightblue";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          drawCourse(courses[courseIndex]);
+          drawBall(ball.x, ball.y);
+          drawAimLine();
+        }
+
+        // Physics and game logic
+        function reflectBall(normalX, normalY) {
+          const dot = ball.vx * normalX + ball.vy * normalY;
+          ball.vx -= 2 * dot * normalX;
+          ball.vy -= 2 * dot * normalY;
+        }
+
+        function checkBoundaries(course) {
+          for (let i = 0; i < course.boundaries.length; i++) {
+            const p1 = course.boundaries[i];
+            const p2 = course.boundaries[(i + 1) % course.boundaries.length];
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const lenSq = dx * dx + dy * dy;
+            const ballToP1X = ball.x - p1.x;
+            const ballToP1Y = ball.y - p1.y;
+            let t = (ballToP1X * dx + ballToP1Y * dy) / lenSq;
+            t = Math.max(0, Math.min(1, t));
+            const closestX = p1.x + t * dx;
+            const closestY = p1.y + t * dy;
+            const dist = Math.hypot(ball.x - closestX, ball.y - closestY);
+            if (dist < 10) {
+              const normalX = (ball.x - closestX) / dist;
+              const normalY = (ball.y - closestY) / dist;
+              reflectBall(normalX, normalY);
+              // Move ball out of collision
+              const overlap = 10 - dist;
+              ball.x += overlap * normalX;
+              ball.y += overlap * normalY;
+            }
+          }
+        }
+
+        function isBallInHole(course) {
+          return Math.hypot(ball.x - course.end.x, ball.y - course.end.y) < 15;
+        }
+
+        function update(dt) {
+          const course = courses[courseIndex];
+
+          if (ball.moving) {
+            ball.x += ball.vx * dt * 0.1;
+            ball.y += ball.vy * dt * 0.1;
+
+            // Out of bounds check
+            // For fast balls, it may skip over the boundaries
+            if (
+              ball.x < 0 ||
+              ball.x > canvas.width ||
+              ball.y < 0 ||
+              ball.y > canvas.height
+            ) {
+              ball.restorePrev();
+              return;
+            }
+
+            // Friction
+            ball.vx *= 0.95;
+            ball.vy *= 0.95;
+
+            // Stop if slow
+            if (Math.hypot(ball.vx, ball.vy) < 0.05) {
+              ball.moving = false;
+              ball.vx = 0;
+              ball.vy = 0;
+            }
+          } else {
+            ball.updatePrev();
+          }
+
+          checkBoundaries(course);
+
+          if (isBallInHole(course)) {
+            courseIndex++;
+            if (courseIndex >= courses.length) {
+              captchaSuccess();
+              courseIndex = 0;
+              success = true;
+            }
+            ball.reset(courses[courseIndex].start);
+          }
+        }
+
+        // Main game loop
+        let lastTime = performance.now();
+        function gameLoop(currentTime) {
+          const dt = currentTime - lastTime;
+          update(dt);
+          draw();
+          lastTime = currentTime;
+          if (success) {
+            ctx.fillStyle = "blue";
+            ctx.font = "24px Arial";
+            ctx.fillText("CAPTCHA Completed!", 100, 150);
+            canvas.removeEventListener("mousedown", onMouseDown);
+            return;
+          }
+          requestAnimationFrame(gameLoop);
+        }
+
+        // Mouse controls
+        function onMouseDown(e) {
+          if (ball.moving) return;
+          const rect = canvas.getBoundingClientRect();
+          const mx = e.clientX - rect.left;
+          const my = e.clientY - rect.top;
+          if (mx - ball.x + (my - ball.y) > 100) return; // Too far from ball to aim
+          aim = { x: mx, y: my };
+
+          function onMove(ev) {
+            aim.x = ev.clientX - rect.left;
+            aim.y = ev.clientY - rect.top;
+            draw();
+          }
+          function onUp(ev) {
+            document.removeEventListener("mousemove", onMove);
+            document.removeEventListener("mouseup", onUp);
+            // Shoot
+            ball.vx = (ball.x - aim.x) / 10;
+            ball.vy = (ball.y - aim.y) / 10;
+            ball.moving = true;
+            aim = null;
+          }
+          document.addEventListener("mousemove", onMove);
+          document.addEventListener("mouseup", onUp);
+        }
+
+        canvas.addEventListener("mousedown", onMouseDown);
+
+        // Initial draw and start loop
+        draw();
+        requestAnimationFrame(gameLoop);
+      })(window, document);
+    </script>
+  </body>
 </html>
