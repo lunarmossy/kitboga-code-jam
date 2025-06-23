@@ -20,7 +20,9 @@
         height: 300px;
       }
 
-      /* Your style here... */
+      #captcha-container {
+        overflow: hidden;
+      }
     </style>
   </head>
 
@@ -266,9 +268,6 @@
           draw();
           lastTime = currentTime;
           if (success) {
-            ctx.fillStyle = "blue";
-            ctx.font = "24px Arial";
-            ctx.fillText("CAPTCHA Completed!", 100, 150);
             canvas.removeEventListener("mousedown", onMouseDown);
             return;
           }
