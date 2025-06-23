@@ -296,10 +296,7 @@
           update(dt);
           draw();
           lastTime = currentTime;
-          if (success) {
-            canvas.removeEventListener("mousedown", onMouseDown);
-            return;
-          }
+          if (success) return;
           requestAnimationFrame(gameLoop);
         }
 
@@ -330,7 +327,40 @@
           document.addEventListener("mouseup", onUp);
         }
 
+        // Touch controls
+        function onTouchStart(e) {
+          if (ball.moving) return;
+          const rect = canvas.getBoundingClientRect();
+          const touch = e.touches[0];
+          const mx = touch.clientX - rect.left;
+          const my = touch.clientY - rect.top;
+          if (mx - ball.x + (my - ball.y) > 100) return; // Too far from ball to aim
+          aim = { x: mx, y: my };
+
+          function onMove(ev) {
+            const moveTouch = ev.touches[0];
+            aim.x = moveTouch.clientX - rect.left;
+            aim.y = moveTouch.clientY - rect.top;
+            draw();
+          }
+          function onEnd(ev) {
+            document.removeEventListener("touchmove", onMove);
+            document.removeEventListener("touchend", onEnd);
+            // Shoot
+            if (aim) {
+              ball.vx = (ball.x - aim.x) / 10;
+              ball.vy = (ball.y - aim.y) / 10;
+              ball.moving = true;
+              aim = null;
+            }
+          }
+          document.addEventListener("touchmove", onMove, { passive: false });
+          document.addEventListener("touchend", onEnd);
+          e.preventDefault();
+        }
+
         canvas.addEventListener("mousedown", onMouseDown);
+        canvas.addEventListener("touchstart", onTouchStart, { passive: false });
 
         // Initial draw and start loop
         draw();
