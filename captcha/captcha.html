@@ -82,17 +82,42 @@
           {
             // # #
             // ###
-            start: { x: 75, y: 75 },
-            end: { x: 310, y: 75 },
+            start: { x: 60, y: 40 },
+            end: { x: 330, y: 60 },
             boundaries: [
               { x: 10, y: 10 },
-              { x: 150, y: 10 },
-              { x: 150, y: 160 },
-              { x: 240, y: 160 },
-              { x: 240, y: 10 },
+              { x: 110, y: 10 },
+              { x: 110, y: 190 },
+              { x: 280, y: 190 },
+              { x: 280, y: 10 },
               { x: 380, y: 10 },
               { x: 380, y: 290 },
-              { x: 10, y: 290 },
+              { x: 80, y: 290 },
+              { x: 10, y: 220 },
+              { x: 10, y: 10 },
+            ],
+          },
+          {
+            // idknemore
+            start: { x: 60, y: 40 },
+            end: { x: 330, y: 240 },
+            boundaries: [
+              { x: 10, y: 10 },
+              { x: 110, y: 10 },
+              { x: 110, y: 190 },
+              { x: 145, y: 190 },
+              { x: 145, y: 80 },
+              { x: 215, y: 10 },
+              { x: 310, y: 10 },
+              { x: 380, y: 80 },
+              { x: 380, y: 290 },
+              { x: 280, y: 290 },
+              { x: 280, y: 110 },
+              { x: 245, y: 110 },
+              { x: 245, y: 220 },
+              { x: 175, y: 290 },
+              { x: 80, y: 290 },
+              { x: 10, y: 220 },
               { x: 10, y: 10 },
             ],
           },
@@ -149,7 +174,11 @@
         function drawBall(x, y) {
           ctx.beginPath();
           ctx.arc(x, y, 10, 0, Math.PI * 2);
-          ctx.fillStyle = "white";
+          if (ball.moving) {
+            ctx.fillStyle = "#ffcc00";
+          } else {
+            ctx.fillStyle = "white";
+          }
           ctx.fill();
           ctx.closePath();
         }
@@ -218,8 +247,8 @@
           const course = courses[courseIndex];
 
           if (ball.moving) {
-            ball.x += ball.vx * dt * 0.1;
-            ball.y += ball.vy * dt * 0.1;
+            ball.x += ball.vx * dt * 0.15;
+            ball.y += ball.vy * dt * 0.15;
 
             // Out of bounds check
             // For fast balls, it may skip over the boundaries
@@ -234,8 +263,8 @@
             }
 
             // Friction
-            ball.vx *= 0.95;
-            ball.vy *= 0.95;
+            ball.vx *= 0.97;
+            ball.vy *= 0.97;
 
             // Stop if slow
             if (Math.hypot(ball.vx, ball.vy) < 0.05) {
