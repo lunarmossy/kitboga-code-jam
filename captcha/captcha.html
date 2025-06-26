@@ -50,6 +50,7 @@
         let courseIndex = 0;
         let success = false;
         let aim = null;
+        let strokes = 0;
 
         const courses = [
           {
@@ -119,6 +120,37 @@
               { x: 80, y: 290 },
               { x: 10, y: 220 },
               { x: 10, y: 10 },
+            ],
+          },
+          {
+            // snake
+            start: { x: 50, y: 250 },
+            end: { x: 325, y: 250 },
+            boundaries: [
+              { x: 10, y: 210 },
+              { x: 140, y: 210 },
+              { x: 140, y: 190 },
+              { x: 10, y: 190 },
+              { x: 10, y: 10 },
+              { x: 310, y: 10 },
+              { x: 380, y: 80 },
+              { x: 380, y: 190 },
+              { x: 340, y: 190 },
+              { x: 340, y: 210 },
+              { x: 380, y: 210 },
+              { x: 380, y: 290 },
+              { x: 270, y: 290 },
+              { x: 270, y: 210 },
+              { x: 310, y: 210 },
+              { x: 310, y: 190 },
+              { x: 270, y: 190 },
+              { x: 270, y: 90 },
+              { x: 120, y: 90 },
+              { x: 120, y: 110 },
+              { x: 250, y: 110 },
+              { x: 250, y: 290 },
+              { x: 10, y: 290 },
+              { x: 10, y: 210 },
             ],
           },
         ];
@@ -204,6 +236,21 @@
           drawCourse(courses[courseIndex]);
           drawBall(ball.x, ball.y);
           drawAimLine();
+
+          // draw course number
+          ctx.fillStyle = "black";
+          ctx.font = "16px Arial";
+          ctx.fillText(
+            `Hole: ${courseIndex + 1} of ${courses.length}`,
+            10,
+            canvas.height - 10
+          );
+          // draw strokes
+          ctx.fillText(
+            `Total Strokes: ${strokes}`,
+            canvas.width - 120,
+            canvas.height - 10
+          );
         }
 
         // Physics and game logic
@@ -281,9 +328,14 @@
           if (isBallInHole(course)) {
             courseIndex++;
             if (courseIndex >= courses.length) {
-              captchaSuccess();
               courseIndex = 0;
-              success = true;
+              if (strokes > 20) {
+                alert("Complete the CAPTCHA with 20 or fewer strokes!");
+              } else {
+                captchaSuccess();
+                success = true;
+              }
+              strokes = 0;
             }
             ball.reset(courses[courseIndex].start);
           }
@@ -322,6 +374,7 @@
             ball.vy = (ball.y - aim.y) / 10;
             ball.moving = true;
             aim = null;
+            strokes++;
           }
           document.addEventListener("mousemove", onMove);
           document.addEventListener("mouseup", onUp);
@@ -329,12 +382,13 @@
 
         // Touch controls
         function onTouchStart(e) {
+          // idk, i just copied this, but it doesn't really work
           if (ball.moving) return;
           const rect = canvas.getBoundingClientRect();
           const touch = e.touches[0];
           const mx = touch.clientX - rect.left;
           const my = touch.clientY - rect.top;
-          if (mx - ball.x + (my - ball.y) > 100) return; // Too far from ball to aim
+          if (mx - ball.x + (my - ball.y) > 400) return; // Too far from ball to aim
           aim = { x: mx, y: my };
 
           function onMove(ev) {
@@ -352,6 +406,7 @@
               ball.vy = (ball.y - aim.y) / 10;
               ball.moving = true;
               aim = null;
+              strokes++;
             }
           }
           document.addEventListener("touchmove", onMove, { passive: false });
